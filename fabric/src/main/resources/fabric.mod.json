@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "lootr_ftb",
+  "version": "${version}",
+  "name": "Lootr & FTB Integration",
+  "description": "Integration between Lootr and FTB Teams.",
+  "authors": [
+    "Noobanidus"
+  ],
+  "contact": {
+    "homepage": "https://www.curseforge.com/minecraft/mc-mods/lootr-ftb",
+    "sources": "https://github.com/LootrMinecraft/Lootr-FTB",
+    "issues": "https://github.com/LootrMinecraft/Lootr-FTB/issues"
+  },
+  "license": "MIT License",
+  "icon": "icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "noobanidus.mods.lootr_ftb.fabric.LootrFTB"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.17.0",
+    "fabric": ">=0.100.3",
+    "minecraft": "${minecraft_version}",
+    "java": ">=21",
+    "lootr": ">=${lootr_version}",
+    "ftbteams": ">=${ftb_teams_version}"
+  }
+}

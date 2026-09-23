@@ -1,0 +1,210 @@
+plugins {
+    id 'net.neoforged.moddev'
+}
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+def extraModsDir = "extra-mods"
+
+repositories {
+    maven { url "https://api.modrinth.com/maven" }
+    flatDir {
+        name "extra-mods"
+        dir file(extraModsDir)
+    }
+}
+
+dependencies {
+    compileOnly(project(':common')) {
+        transitive = false
+    }
+    implementation(annotationProcessor("io.github.llamalad7:mixinextras-common:${rootProject.mixin_extras_version}"))
+    implementation("io.github.llamalad7:mixinextras-neoforge:${rootProject.mixin_extras_version}")
+    implementation "maven.modrinth:jade:${rootProject.jade_version}+neoforge"
+
+    implementation "dev.architectury:architectury-neoforge:${rootProject.architectury_api_version}"
+
+    compileOnly "noobanidus.mods.lootr:lootr-neoforge:${rootProject.lootr_version}"
+    runtimeOnly "noobanidus.mods.lootr:lootr-neoforge:${rootProject.lootr_version}"
+
+    compileOnly "dev.ftb.mods:ftb-teams-neoforge:${rootProject.ftb_teams_version}"
+    runtimeOnly "dev.ftb.mods:ftb-teams-neoforge:${rootProject.ftb_teams_version}"
+    compileOnly "dev.ftb.mods:ftb-library-neoforge:${rootProject.ftb_library_version}"
+    runtimeOnly "dev.ftb.mods:ftb-library-neoforge:${rootProject.ftb_library_version}"
+
+    // Locally sourced extra mods for runtime (i.e. testing)
+    for (extraModJar in fileTree(dir: extraModsDir, include: '*.jar')) {
+        def basename = extraModJar.name.substring(0, extraModJar.name.length() - ".jar".length())
+        def versionSep = basename.lastIndexOf('-')
+        assert versionSep != -1
+        def artifactId = basename.substring(0, versionSep)
+        def version = basename.substring(versionSep + 1)
+        implementation "extra-mods:$artifactId:$version"
+    }
+}
+
+sourceSets {
+    gameTest {
+        java.srcDirs = ['src/gametest/java']
+        resources.srcDirs = ['src/gametest/resources']
+        compileClasspath += sourceSets.main.output + configurations.compileClasspath
+        runtimeClasspath += output + sourceSets.main.runtimeClasspath
+    }
+}
+
+publishMods {
+    file = tasks.jar.archiveFile
+    modLoaders.add("neoforge")
+
+    var env = System.getenv()
+
+    def utils = project.objects.newInstance(ExecUtils)
+
+    def gitRepo = utils.getExecOutput(['git', 'remote', 'get-url', 'origin'])
+    def gitCommit = utils.getExecOutput(['git', 'log', '-n', '1', '--pretty=tformat:%h'])
+    def gitPrevCommit = project.findProperty("git_previous_commit") ?: env["GIT_PREVIOUS_COMMIT"]
+
+    var changelogText = ""
+
+    if (gitCommit && gitPrevCommit) {
+        changelogText += utils.getExecOutput(['git', 'log', "--pretty=tformat:- %s [(%h)](${gitRepo}/commit/%h)", '' + gitPrevCommit + '..' + gitCommit])
+    }
+
+    if (project.hasProperty('curseforge_id')) {
+        curseforge('curseforgeNeoForge') {
+            type = STABLE
+
+            client = true
+            server = true
+            projectSlug = "lootr"
+            displayName = "lootr-ftb-neoforge-${rootProject.minecraft_version}-${rootProject.mod_version}"
+            accessToken = project.findProperty("curse_auth")
+            projectId = project.findProperty('curseforge_id')
+            announcementTitle = "Lootr & FTB Teams ${rootProject.minecraft_version}-${rootProject.mod_version} for NeoForge on CurseForge"
+            minecraftVersions.add(project.minecraft_version)
+            changelog = changelogText
+        }
+    }
+
+    if (project.hasProperty('modrinth_id')) {
+        modrinth('modrinthNeoForge') {
+            type = STABLE
+            displayName = "lootr-ftb-neoforge-${rootProject.minecraft_version}-${rootProject.mod_version}"
+            accessToken = project.findProperty("modrinth_auth")
+            projectId = project.findProperty('modrinth_id')
+            announcementTitle = "Lootr & FTB Teams ${rootProject.minecraft_version}-${rootProject.mod_version} for NeoForge on Modrinth"
+            minecraftVersions.add(project.minecraft_version)
+            changelog = changelogText
+        }
+    }
+
+    if (project.hasProperty("curse_discord_webhook")) {
+        discord {
+            webhookUrl = project.findProperty("curse_discord_webhook")
+            username = "Lootr & FTB Teams Update"
+            content = "A new version of Lootr & FTB Teams has been released!\n\n${changelogText.take(500)}"
+        }
+    }
+}
+
+neoForge {
+    version = project.neoforge_version
+
+    parchment {
+        minecraftVersion = project.parchment_minecraft_version
+        mappingsVersion = project.parchment_mappings_version
+    }
+
+    def atFile = project.file("src/main/resources/META-INF/accesstransformer_neoforge.cfg")
+    if (atFile.exists()) {
+        accessTransformers {
+            from atFile
+            publish atFile
+        }
+    }
+
+    validateAccessTransformers.set(true)
+    addModdingDependenciesTo(sourceSets.gameTest)
+
+    mods {
+        // define mod <-> source bindings
+        // these are used to tell the game which sources are for which mod
+        // mostly optional in a single mod project
+        // but multi mod projects should define one per mod
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+            sourceSet(project.project(":common").sourceSets.main)
+        }
+        "${mod_id}_gametest" {
+            sourceSet(sourceSets.gameTest)
+        }
+    }
+
+    runs {
+        configureEach {
+            logLevel = org.slf4j.event.Level.DEBUG
+
+            gameDirectory = project.file('run')
+
+            sourceSet = sourceSets.main
+            loadedMods.set([mods."${mod_id}"])
+        }
+
+        client {
+            client()
+            //systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+
+            if (project.hasProperty('mc_uuid')) {
+                programArguments.add("--uuid=${project.findProperty('mc_uuid')}")
+            }
+
+            if (project.hasProperty('mc_username')) {
+                programArguments.add("--username=${project.findProperty('mc_username')}")
+            }
+
+            if (project.hasProperty('mc_java_agent_path')) {
+                jvmArgument("-javaagent:${project.findProperty('mc_java_agent_path')}")
+            }
+        }
+
+        server {
+            server()
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        gameTestServer {
+            type = "gameTestServer"
+            sourceSet = sourceSets.gameTest
+            loadedMods.add(mods."${mod_id}_gametest")
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        clientData {
+            data()
+            programArguments.addAll '--all', '--mod', 'lootr', '--existing', project.project(":common").file("src/main/resources").absolutePath, '--output', project.project(":common").file("src/generated/resources").absolutePath
+        }
+    }
+}
+
+tasks.named("compileJava", JavaCompile) {
+    source(project.project(":common").sourceSets.main.allJava)
+}
+
+tasks.named("javadoc", Javadoc) {
+    source(project.project(":common").sourceSets.main.allJava)
+}
+
+tasks.named("sourcesJar", Jar) {
+    from(project.project(":common").sourceSets.main.allSource)
+}
+
+processResources {
+    from(project.project(":common").sourceSets.main.resources)
+}
+
+tasks.build.mustRunAfter tasks.clean
+tasks.publish.mustRunAfter tasks.build
+tasks.publishMods.mustRunAfter tasks.publish
+tasks.buildAndRelease.dependsOn(tasks.clean, tasks.build, tasks.publish, tasks.publishMods)

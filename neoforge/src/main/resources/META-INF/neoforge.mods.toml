@@ -1,0 +1,31 @@
+modLoader="javafml" 
+loaderVersion="[2,)"
+issueTrackerURL="https://github.com/LootrMinecraft/Lootr-FTB/issues"
+license="https://github.com/LootrMinecraft/LootrFTB/blob/mdg-1.21.1/LICENSE"
+[[mods]]
+    modId="lootr_ftb"
+    version="${version}"
+    displayName="Lootr & FTB Integration"
+    displayURL="https://minecraft.curseforge.com/projects/lootr-ftb"
+    authors="Noobanidus"
+    description="Integration for Lootr & FTB Teams."
+
+[[dependencies.lootr_ftb]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version}"
+
+[[dependencies.lootr_ftb]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1.195,)"
+
+[[dependencies.lootr_ftb]]
+ modId="lootr"
+ type="required"
+ versionRange="[${lootr_version},)"
+
+[[dependencies.lootr_ftb]]
+ modId="ftbteams"
+ type="required"
+ versionRange="[${ftb_teams_version},)"
