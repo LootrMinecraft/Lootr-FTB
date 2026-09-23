@@ -17,12 +17,22 @@ public class FTBTeamsResolver implements ITeamResolver {
 
   @Override
   public UUID resolveServerPlayer(Player player) {
-    return FTBTeamsAPI.api().getManager().getTeamForPlayer((ServerPlayer) player).orElseThrow().getTeamId();
+    var team = FTBTeamsAPI.api().getManager().getTeamForPlayer((ServerPlayer) player).orElseThrow();
+    if (team.getMembers().size() == 1) {
+      return player.getUUID();
+    }
+
+    return team.getTeamId();
   }
 
   @Override
   public UUID resolveClientPlayer(Player player) {
-    return FTBTeamsAPI.api().getClientManager().getTeamForPlayer(player).orElseThrow().getTeamId();
+    var team = FTBTeamsAPI.api().getClientManager().getTeamForPlayer(player).orElseThrow();
+    if (team.getMembers().size() == 1) {
+      return player.getUUID();
+    }
+
+    return team.getTeamId();
   }
 
   @Override
