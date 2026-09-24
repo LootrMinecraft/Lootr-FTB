@@ -85,6 +85,9 @@ publishMods {
             announcementTitle = "Lootr & FTB Teams ${rootProject.minecraft_version}-${rootProject.mod_version} for NeoForge on CurseForge"
             minecraftVersions.add(project.minecraft_version)
             changelog = changelogText
+
+            requires("lootr")
+            requires("ftb-teams-forge")
         }
     }
 
@@ -97,6 +100,8 @@ publishMods {
             announcementTitle = "Lootr & FTB Teams ${rootProject.minecraft_version}-${rootProject.mod_version} for NeoForge on Modrinth"
             minecraftVersions.add(project.minecraft_version)
             changelog = changelogText
+
+            requires("lootr")
         }
     }
 

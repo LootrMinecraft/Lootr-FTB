@@ -106,6 +106,9 @@ publishMods {
             client = true
             server = true
 
+            requires("lootr-fabric")
+            requires("ftb-teams-fabric")
+
             uploadDependencies.each { dep, required ->
                 if (required) {
                     requires(dep)
@@ -125,6 +128,8 @@ publishMods {
             announcementTitle = "Lootr & FTB Teams ${rootProject.minecraft_version}-${rootProject.mod_version} for Fabric on Modrinth"
             minecraftVersions.add(project.minecraft_version)
             changelog = changelogText
+
+            requires ("lootr")
 
             dependencies {
                 uploadDependencies.each { dep, required ->
